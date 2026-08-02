@@ -311,13 +311,32 @@ def make_sklearn_baseline(kind: str, X: pd.DataFrame, y):
 
 
 def make_models(X: pd.DataFrame, y, lgbm_params: dict | None = None) -> dict:
-    """Trả về dict {tên: estimator} cho so sánh công bằng (mọi tiền xử lý in-fold)."""
-    return {
+    """Trả về dict {tên: estimator} cho so sánh công bằng (mọi tiền xử lý in-fold).
+
+    ### [SỬA 7] Bảng so sánh chỉ gồm BA thuật toán, tất cả dùng tham số mặc định.
+
+    Bản trước luôn tạo mục "LightGBM (tinh chỉnh)"; nhưng `run_pipeline.py` gọi
+    `make_models(X, y)` KHÔNG truyền lgbm_params, nên nhánh else chạy và mục này
+    trở thành BẢN SAO y hệt của "LightGBM (mặc định)" — chênh lệch đúng bằng 0
+    ở mọi chỉ số. Hệ quả: (a) bảng so sánh có một mô hình giả, (b) DeLong sinh
+    các cặp trùng lặp làm hiệu chỉnh Holm bị chia cho 6 cặp thay vì 3.
+
+    Nguyên tắc sau khi sửa: mục 4.3 so sánh THUẬT TOÁN dưới cùng một giao thức
+    (mọi mô hình đều dùng tham số mặc định — công bằng, và tránh câu hỏi "vì sao
+    chỉ tinh chỉnh LightGBM mà không tinh chỉnh RF/LogReg"). Ảnh hưởng của việc
+    tinh chỉnh siêu tham số được đánh giá RIÊNG và ĐÚNG CÁCH bằng nested CV
+    (`nested_cv_lgbm`), là nơi duy nhất bàn về tinh chỉnh.
+
+    Mục "LightGBM (tinh chỉnh)" chỉ được thêm khi thực sự có lgbm_params.
+    """
+    models = {
         "Logistic Regression": make_sklearn_baseline("logreg", X, y),
         "Random Forest": make_sklearn_baseline("rf", X, y),
         "LightGBM (mặc định)": make_lgbm(X, y),
-        "LightGBM (tinh chỉnh)": make_lgbm(X, y, lgbm_params) if lgbm_params else make_lgbm(X, y),
     }
+    if lgbm_params:
+        models["LightGBM (tinh chỉnh)"] = make_lgbm(X, y, lgbm_params)
+    return models
 
 
 # ============================================================================
@@ -589,6 +608,90 @@ def decision_curve(y, prob, thresholds=None):
         nb_all = prev - (1 - prev) * w
         rows.append({"threshold": pt, "nb_model": nb_model,
                      "nb_all": nb_all, "nb_none": 0.0})
+    return pd.DataFrame(rows)
+
+
+def warning_tiers(y, prob, thresholds=(0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50),
+                  tier1: float = 0.10, tier2: float = 0.40) -> pd.DataFrame:
+    """### [SỬA 9] Sinh BẢNG NGƯỠNG CẢNH BÁO HAI TẦNG từ pipeline (trước đây chỉ
+    có trong notebook Bước 13, nên không truy vết được nguồn).
+
+    LƯU Ý VỀ THIẾT KẾ (phải nêu đúng trong luận văn): "hai tầng" ở đây KHÔNG phải
+    hai thời điểm dự báo khác nhau, mà là **hai mức độ can thiệp** trên cùng một
+    bộ xác suất đã hiệu chỉnh (isotonic, chân trời HK1-2):
+      - Tầng 1 (ngưỡng thấp)  : sàng lọc rộng, ưu tiên KHÔNG BỎ SÓT (recall cao).
+      - Tầng 2 (ngưỡng cao)   : can thiệp sâu, ưu tiên ĐỘ CHÍNH XÁC (precision cao).
+    Mở rộng sang cảnh báo nhiều thời điểm (HK1 rồi HK1-2) là hướng nghiên cứu sau.
+
+    Trả về DataFrame[threshold, n_flagged, pct_flagged, precision, recall, tier].
+    """
+    from sklearn.metrics import precision_score, recall_score
+    y = np.asarray(y); prob = np.asarray(prob)
+    rows = []
+    for thr in thresholds:
+        pred = (prob >= thr).astype(int)
+        tier = ""
+        if np.isclose(thr, tier1):
+            tier = "Tầng 1 — sàng lọc rộng"
+        elif np.isclose(thr, tier2):
+            tier = "Tầng 2 — can thiệp sâu"
+        rows.append({
+            "threshold": float(thr),
+            "n_flagged": int(pred.sum()),
+            "pct_flagged": float(pred.mean()),
+            "precision": float(precision_score(y, pred, zero_division=0)),
+            "recall": float(recall_score(y, pred)),
+            "tier": tier,
+        })
+    return pd.DataFrame(rows)
+
+
+def leakage_validation(df: pd.DataFrame, seed: int = RANDOM_STATE) -> pd.DataFrame:
+    """### [SỬA 8] Sinh BẢNG BẰNG CHỨNG RÒ RỈ để Chương 4 trích dẫn được từ tệp.
+
+    Trước đây các con số này chỉ nằm trong tường thuật của notebook (Bước 5-5b),
+    nên luận điểm trung tâm "rò rỉ làm phồng kết quả" không truy vết được về nguồn
+    như mọi bảng khác. Hàm này tái lập ĐÚNG cách tính của notebook:
+
+      (a) Thiết kế CŨ: build_features_raw(df, h) trên TOÀN KHÓA (không lọc quần
+          thể), LightGBM, 5-fold stratified CV -> AUC bị thổi phồng.
+      (b) Một biến GPA4_2 đơn lẻ: roc_auc_score(y, -GPA4_2), không cần mô hình.
+      (c) Thiết kế MỚI theo chân trời: horizon_dataset(df, h) -> AUC bảo vệ được.
+
+    Trả về DataFrame[design, scope, n, n_features, AUC].
+    """
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+
+    rows = []
+    y_all = np.asarray(get_target(df))
+    cv = StratifiedKFold(5, shuffle=True, random_state=seed)
+
+    # (a) thiết kế cũ — toàn khóa, chưa lọc quần thể
+    for name, h in SCOPES.items():
+        X = build_features_raw(df, h)
+        p = cross_val_predict(make_lgbm(X), X, y_all, cv=cv,
+                              method="predict_proba", n_jobs=1)[:, 1]
+        rows.append({"design": "Thiết kế cũ (toàn khóa, có rò rỉ)", "scope": name,
+                     "n": len(y_all), "n_features": X.shape[1],
+                     "AUC": float(roc_auc_score(y_all, p))})
+
+    # (b) một biến GPA4_2 đơn lẻ — GPA thấp = nguy cơ cao
+    d = clean_raw(df)
+    rows.append({"design": "Chỉ một biến GPA4_2 (không mô hình)", "scope": "—",
+                 "n": len(y_all), "n_features": 1,
+                 "AUC": float(roc_auc_score(y_all, -d["GPA4_2"]))})
+
+    # (c) thiết kế mới — theo chân trời, quần thể strict
+    for name, h in [("HK1", 1), ("HK1-2", 2)]:
+        X, yh, _ = horizon_dataset(df, h)
+        yh = np.asarray(yh)
+        p = cross_val_predict(make_lgbm(X), X, yh, cv=cv,
+                              method="predict_proba", n_jobs=1)[:, 1]
+        rows.append({"design": "Thiết kế theo chân trời (luận văn)", "scope": name,
+                     "n": len(yh), "n_features": X.shape[1],
+                     "AUC": float(roc_auc_score(yh, p))})
+
     return pd.DataFrame(rows)
 
 

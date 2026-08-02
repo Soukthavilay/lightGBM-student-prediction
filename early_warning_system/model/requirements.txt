@@ -1,0 +1,15 @@
+# Lõi mô hình + suy luận (Sprint 1) — khớp phiên bản trong luận văn (§3.12)
+lightgbm==4.5.0
+scikit-learn==1.6.1
+shap==0.49.1
+numpy==1.26.4
+pandas
+joblib
+
+# Backend (Sprint 2) — thêm khi bắt đầu:
+# fastapi
+# uvicorn[standard]
+# python-multipart      # nhận tải CSV
+# python-jose[cryptography]  # JWT
+# openpyxl              # xuất Excel
+# reportlab             # xuất PDF

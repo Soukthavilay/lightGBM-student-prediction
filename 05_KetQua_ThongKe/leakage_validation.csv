@@ -1,0 +1,7 @@
+design,scope,n,n_features,AUC
+"Thiết kế cũ (toàn khóa, có rò rỉ)",HK1,7514,25,0.8562828956610598
+"Thiết kế cũ (toàn khóa, có rò rỉ)",HK1-2,7514,36,0.9546126610856098
+"Thiết kế cũ (toàn khóa, có rò rỉ)","Đầy đủ (4HK, tham chiếu)",7514,48,0.9999999999999999
+Chỉ một biến GPA4_2 (không mô hình),—,7514,1,0.9555694070410355
+Thiết kế theo chân trời (luận văn),HK1,7367,25,0.8386211604145157
+Thiết kế theo chân trời (luận văn),HK1-2,7034,36,0.9145268736589788

@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: Hệ thống Cảnh báo sớm Nguy cơ Bỏ học — API
+  description: >-
+    Hợp đồng API (CHƯA hiện thực). Định nghĩa trước để API contract nhất quán
+    trước khi viết FastAPI (Sprint 2). Schema phản ánh contracts.py.
+    Rule #1: đây là bề mặt của một HIỆN THỰC nghiên cứu, không định nghĩa lại phương pháp.
+  version: 1.0.0                      # = CONTRACT_VERSION
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/login:
+    post:
+      summary: Đăng nhập (demo — một tài khoản cố vấn cho bảo vệ)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Token" } } } }
+        "401": { description: Sai thông tin đăng nhập }
+
+  /upload:
+    post:
+      summary: Tải CSV hồ sơ sinh viên (lược đồ Testkhoa.csv)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200": { description: Đã nhận, content: { application/json: { schema: { $ref: "#/components/schemas/UploadResult" } } } }
+        "422":
+          description: Hồ sơ không hợp lệ (ValidationError)
+          content: { application/json: { schema: { $ref: "#/components/schemas/ValidationReport" } } }
+
+  /predict:
+    post:
+      summary: Dự báo cho lô đã tải lên
+      parameters:
+        - { name: job_id, in: query, required: true, schema: { type: string } }
+        - { name: profile, in: query, required: false, schema: { type: string, default: "HK1-2" } }
+        - { name: top_k, in: query, required: false, schema: { type: integer, default: 5 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PredictResponse" } } } }
+        "404": { description: Profile không tồn tại (ProfileNotFoundError) }
+        "409": { description: Artifact lệch hợp đồng/dữ liệu (ArtifactMismatchError), content: { application/json: { schema: { $ref: "#/components/schemas/ArtifactMismatch" } } } }
+        "500": { description: Suy luận thất bại (PredictionError) }
+
+  /students:
+    get:
+      summary: Danh sách sinh viên đã dự báo, lọc theo tầng
+      parameters:
+        - { name: job_id, in: query, required: true, schema: { type: string } }
+        - name: tier
+          in: query
+          required: false
+          description: Lọc theo tầng, phân tách bằng dấu phẩy (vd "1,2")
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PredictionResult" }
+
+  /student/{id}:
+    get:
+      summary: Chi tiết một sinh viên + giải thích SHAP
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: job_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PredictionResult" } } } }
+        "404": { description: Không tìm thấy sinh viên }
+
+  /export:
+    get:
+      summary: Xuất kết quả (Excel/PDF)
+      parameters:
+        - { name: job_id, in: query, required: true, schema: { type: string } }
+        - { name: format, in: query, required: true, schema: { type: string, enum: [xlsx, pdf] } }
+        - { name: tier, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: Tệp tải về
+          content:
+            application/octet-stream: { schema: { type: string, format: binary } }
+
+components:
+  schemas:
+    Token:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: bearer }
+
+    UploadResult:
+      type: object
+      properties:
+        job_id: { type: string }
+        n_rows: { type: integer }
+        validation: { $ref: "#/components/schemas/ValidationReport" }
+
+    ValidationReport:
+      type: object
+      properties:
+        ok: { type: boolean }
+        n_rows: { type: integer }
+        missing_columns: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+
+    FeatureContribution:
+      type: object
+      properties:
+        feature: { type: string, example: GPA4_2 }
+        value: { type: number, nullable: true }
+        shap: { type: number }
+        direction: { type: string, enum: ["tăng rủi ro", "giảm rủi ro"] }
+
+    PredictionResult:
+      type: object
+      properties:
+        student_id: { type: string }
+        probability: { type: number, minimum: 0, maximum: 1 }
+        tier: { type: integer, enum: [0, 1, 2] }
+        tier_label: { type: string }
+        top_features:
+          type: array
+          items: { $ref: "#/components/schemas/FeatureContribution" }
+
+    PredictResponse:
+      type: object
+      description: Envelope — contract_version ở đây để phát hiện lệch API/artifact.
+      properties:
+        contract_version: { type: string, example: "1.0.0" }
+        profile: { type: string, example: "HK1-2" }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/PredictionResult" }
+
+    ArtifactMismatch:
+      type: object
+      properties:
+        error: { type: string }
+        expected: { type: string, example: "1.x" }
+        found: { type: string, example: "2.0.0" }

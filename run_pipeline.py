@@ -92,7 +92,7 @@ def main():
     # ------------------------------------------------------------------
     # 1) metrics_with_ci.csv + OOF cho các bước sau
     # ------------------------------------------------------------------
-    print("\n[1/7] Repeated CV + bootstrap CI cho 4 mô hình × 2 tầm nhìn ...")
+    print("\n[1/9] Repeated CV + bootstrap CI cho các mô hình × 2 tầm nhìn ...")
     all_ci, oof_store = [], {}
     for scope, (X, y) in data.items():
         models = dr.make_models(X, y)
@@ -108,7 +108,7 @@ def main():
     # ------------------------------------------------------------------
     # 2) model_significance.csv — DeLong trên mean-OOF + Holm trong từng scope
     # ------------------------------------------------------------------
-    print("\n[2/7] Kiểm định DeLong giữa các cặp mô hình ...")
+    print("\n[2/9] Kiểm định DeLong giữa các cặp mô hình ...")
     rows = []
     for scope, (X, y) in data.items():
         names = list(oof_store[scope].keys())
@@ -130,7 +130,7 @@ def main():
     # ------------------------------------------------------------------
     # 3) nested_cv_results.csv — LightGBM tuned, trung thực (HK1 như bản gốc)
     # ------------------------------------------------------------------
-    print("\n[3/7] Nested CV (Optuna inner) cho LightGBM — HK1 ...")
+    print("\n[3/9] Nested CV (Optuna inner) cho LightGBM — HK1 ...")
     X1, y1 = data["HK1"]
     ncv, best_params, _ = dr.nested_cv_lgbm(X1, y1, n_trials=n_trials)
     ncv.to_csv(os.path.join(TAB, "nested_cv_results.csv"), index=False)
@@ -141,7 +141,7 @@ def main():
     # ------------------------------------------------------------------
     # 4) calibration.pkl — hiệu chỉnh xác suất in-fold (HK1-2)
     # ------------------------------------------------------------------
-    print("\n[4/7] Calibration isotonic/sigmoid (HK1-2) ...")
+    print("\n[4/9] Calibration isotonic/sigmoid (HK1-2) ...")
     from sklearn.metrics import brier_score_loss
     X2, y2 = data["HK1-2"]
     est = dr.make_lgbm(X2)
@@ -161,13 +161,25 @@ def main():
     # ------------------------------------------------------------------
     # 5) decision_curve.csv — trên xác suất isotonic
     # ------------------------------------------------------------------
-    print("\n[5/7] Decision Curve Analysis ...")
+    print("\n[5/9] Decision Curve Analysis ...")
     dr.decision_curve(y2, p_iso).to_csv(os.path.join(TAB, "decision_curve.csv"), index=False)
+
+    # ------------------------------------------------------------------
+    # 5b) warning_thresholds.csv — bảng ngưỡng CẢNH BÁO HAI TẦNG
+    #     (hai MỨC ĐỘ CAN THIỆP trên cùng xác suất HK1-2, không phải hai thời điểm)
+    # ------------------------------------------------------------------
+    print("\n[6/9] Ngưỡng cảnh báo hai tầng (trên xác suất isotonic, HK1-2) ...")
+    wt = dr.warning_tiers(y2, p_iso)
+    wt.to_csv(os.path.join(TAB, "warning_thresholds.csv"), index=False)
+    for _, r in wt.iterrows():
+        mark = f"  << {r['tier']}" if r["tier"] else ""
+        print(f"  p>={r['threshold']:.2f}  recall={r['recall']:.3f}  "
+              f"precision={r['precision']:.3f}  gắn cờ={r['pct_flagged']:.1%}{mark}")
 
     # ------------------------------------------------------------------
     # 6) temporal_ci.csv — train khóa 2020 -> test khóa 2021, cohort MỚI
     # ------------------------------------------------------------------
-    print("\n[6/7] Kiểm định thời gian 2020 -> 2021 (HK1-2, cohort mới) ...")
+    print("\n[7/9] Kiểm định thời gian 2020 -> 2021 (HK1-2, cohort mới) ...")
     from sklearn.metrics import recall_score, precision_score, average_precision_score
     d = dr.clean_raw(df)
     mask2 = dr.horizon_cohort(df, 2)
@@ -190,7 +202,7 @@ def main():
     # ------------------------------------------------------------------
     # 7) fairness_ci.csv + shap_stability.csv (HK1-2, OOF isotonic)
     # ------------------------------------------------------------------
-    print("\n[7/7] Fairness theo nhóm + độ ổn định SHAP ...")
+    print("\n[8/9] Fairness theo nhóm + độ ổn định SHAP ...")
     from sklearn.metrics import recall_score as rec
     raw2 = df.loc[np.asarray(mask2)].reset_index(drop=True)
     gender = raw2["Gender"].astype(str).map(dr.GENDER_LABELS).fillna(dr.MISSING_LABEL)
@@ -228,6 +240,16 @@ def main():
         print("  SHAP stability: OK (5 fold)")
     except ImportError:
         print("  !! thiếu package shap -> bỏ qua shap_stability.csv. Cài: pip install shap")
+
+    # ------------------------------------------------------------------
+    # 8) leakage_validation.csv — BẰNG CHỨNG RÒ RỈ, để Chương 4 trích từ tệp
+    # ------------------------------------------------------------------
+    print("\n[9/9] Bằng chứng định lượng về rò rỉ (thiết kế cũ vs theo chân trời) ...")
+    lk = dr.leakage_validation(df)
+    lk.to_csv(os.path.join(TAB, "leakage_validation.csv"), index=False)
+    for _, r in lk.iterrows():
+        print(f"  {r['design'][:38]:40s} {str(r['scope']):8s} n={int(r['n']):5d} "
+              f"đặc trưng={int(r['n_features']):3d}  AUC={r['AUC']:.3f}")
 
     print(f"\n=== XONG ({tag}). Mở notebook -> Restart Kernel -> Run All. ===")
     if args.fast:
