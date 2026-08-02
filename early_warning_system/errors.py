@@ -36,3 +36,10 @@ class PredictionError(EarlyWarningError):
 
 class ProfileNotFoundError(EarlyWarningError):
     """Yêu cầu một PredictionProfile không tồn tại (vd chân trời chưa xuất artifact)."""
+
+
+class ConfigurationError(EarlyWarningError):
+    """Cấu hình sai — KHÁC với dữ liệu sai (ValidationError) và suy luận hỏng
+    (PredictionError). Ví dụ: tier1 > tier2, ngưỡng âm/ngoài [0,1], thiếu config,
+    profile khai báo không hợp lệ. Thường lộ ra lúc KHỞI ĐỘNG/nạp cấu hình, không
+    phải theo từng yêu cầu — nên bắt sớm, dừng luôn, thay vì để chạy với config hỏng."""

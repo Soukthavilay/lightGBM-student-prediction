@@ -117,17 +117,47 @@ def test_missing_value_stays_none():
     assert r.to_dict()["top_features"][0]["value"] is None
 
 
-# ── PredictionProfile: chỉ là dữ liệu, không đặc biệt hoá tên ─────────────────
-def test_profile_is_plain_data():
-    prof = c.PredictionProfile(name="HK1-2", horizon=2, artifact_dir="model/artifacts")
+# ── PredictionProfile: chỉ là dữ liệu, KHÔNG chứa đường dẫn (ADR 0005) ────────
+def test_profile_is_plain_data_without_path():
+    prof = c.PredictionProfile(id="hk12", name="HK1-2", horizon=2)
     assert prof.horizon == 2
     # thêm profile mới không cần thay đổi gì trong contracts
-    prof3 = c.PredictionProfile(name="HK3", horizon=3, artifact_dir="model/artifacts_hk3")
+    prof3 = c.PredictionProfile(id="hk3", name="HK3", horizon=3)
     assert prof3.horizon == 3
+
+
+def test_profile_has_no_path_field():
+    # đường dẫn là hạ tầng — KHÔNG được lọt vào domain
+    assert not hasattr(c.PredictionProfile(id="x", name="X", horizon=1), "artifact_dir")
 
 
 def test_standard_tier_policy_satisfies_protocol():
     assert isinstance(c.ThresholdTierPolicy(), c.TierPolicy)
+
+
+# ── ConfigurationError: cấu hình sai KHÁC dữ liệu sai ─────────────────────────
+def test_tier_config_rejects_inverted_thresholds():
+    import pytest
+    with pytest.raises(e.ConfigurationError):
+        c.TierConfig(tier1=0.40, tier2=0.10)
+
+
+def test_tier_config_rejects_out_of_range():
+    import pytest
+    with pytest.raises(e.ConfigurationError):
+        c.TierConfig(tier1=-0.1, tier2=0.4)
+    with pytest.raises(e.ConfigurationError):
+        c.TierConfig(tier1=0.1, tier2=1.5)
+
+
+def test_tier_config_default_is_valid():
+    cfg = c.TierConfig()          # không nâng lỗi
+    assert (cfg.tier1, cfg.tier2) == (0.10, 0.40)
+
+
+def test_configuration_error_is_distinct_from_validation():
+    assert not issubclass(e.ConfigurationError, e.ValidationError)
+    assert issubclass(e.ConfigurationError, e.EarlyWarningError)
 
 
 # ── chạy trực tiếp không cần pytest ──────────────────────────────────────────

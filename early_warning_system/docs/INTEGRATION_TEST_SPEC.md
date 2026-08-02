@@ -46,7 +46,13 @@ Kiểm chứng toàn tuyến: `hồ sơ thô → Predictor → PredictionResult`
 - **Then** với sinh viên rủi ro cao, đặc trưng SHAP hàng đầu nằm trong nhóm lõi ổn định của luận văn (§4.10: `GPA4_2`, `IndustryCode`, …). Chỉ là kiểm tra tỉnh táo, **không** dùng làm bằng chứng nhân quả (§2.7.3).
 
 ### IT-10 — Khớp số với luận văn (ở mức phân phối, không từng cá nhân)
-- **Then** tỷ lệ gắn cờ trên toàn tập gần các con số §4.11 *theo hướng* (tầng 2 hẹp hơn tầng 1). **Không** kỳ vọng trùng khít vì production dùng mô hình fit-toàn-bộ, luận văn dùng OOF (khác biệt có chủ ý — xem `metadata.json`).
+- **Then** tỷ lệ gắn cờ trên toàn tập gần các con số §4.11 *theo hướng* (tầng 2 hẹp hơn tầng 1). **Không** kỳ vọng trùng khít vì production dùng mô hình fit-toàn-bộ, luận văn dùng OOF (khác biệt có chủ ý — xem `artifact.json`).
+
+### IT-11 — Feature schema drift 🔴 production hay chết vì cái này, không phải model
+- **Given** `artifact.json.feature_spec_version` và `feature_spec.json` của artifact.
+- **When** adapter dựng đặc trưng cho một lô mới.
+- **Then** **thứ tự cột, kiểu dữ liệu, và SỐ cột** phải khớp đúng `feature_spec` — không dư, không thiếu, không đảo thứ tự. Lệch → `ArtifactMismatchError`, KHÔNG âm thầm dự báo sai.
+- *Vì sao:* hệ thống production hỏng thường xuyên nhất ở **thứ tự/lược đồ đặc trưng**, không phải ở mô hình. `FEATURE_SPEC_VERSION` tăng mỗi khi tập đặc trưng đổi để bắt lệch này ngay.
 
 ## Ngoài phạm vi (thuộc test tầng API, Sprint 2)
 - Xác thực/JWT, tải CSV multipart, ánh xạ mã HTTP, xuất Excel/PDF.

@@ -123,7 +123,7 @@ FeatureBuilder (hợp đồng)  ◄──  ResearchFeatureAdapter (hiện thực
 Hợp đồng `FeatureBuilder` **không biết** tên mã nghiên cứu. Việc "ủy quyền cho research" là quyết định của *một adapter cụ thể*, không phải điều khoản của hợp đồng — nên đổi nguồn đặc trưng (research_v2, pipeline riêng…) chỉ thay adapter.
 
 ### Chân trời = Profile, không hard-code
-Hệ thống không biết "HK1"/"HK1-2"; nó biết một `PredictionProfile(name, horizon, artifact_dir)`. Thêm chân trời mới (HK3…) = thêm một Profile, **không** sửa kiến trúc.
+Hệ thống không biết "HK1"/"HK1-2"; nó biết một `PredictionProfile(id, name, horizon)`. Thêm chân trời mới (HK3…) = thêm một Profile, **không** sửa kiến trúc. Profile **không** chứa đường dẫn artifact — việc ánh xạ profile → vị trí do `ProfileResolver` lo (ADR 0005), để đổi filesystem↔S3↔registry không đụng hợp đồng.
 
 ---
 

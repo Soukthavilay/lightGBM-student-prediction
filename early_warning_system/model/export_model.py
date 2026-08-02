@@ -40,7 +40,10 @@ from sklearn.calibration import CalibratedClassifierCV
 # --- nạp research như thư viện (không sửa) -------------------------------
 THESIS_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(THESIS_ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # để import contracts
 import dropout_research as dr  # noqa: E402
+from contracts import CONTRACT_VERSION  # noqa: E402
+from manifest import build_manifest, current_git_commit  # noqa: E402
 
 ART = Path(__file__).parent / "artifacts"
 ART.mkdir(exist_ok=True)
@@ -99,27 +102,29 @@ def main(horizon: int):
     (ART / "thresholds.json").write_text(json.dumps(thresholds, ensure_ascii=False, indent=2))
 
     data_md5 = md5(data_path)
-    metadata = {
-        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "horizon": horizon, "scope": scope,
-        "n": int(len(y)), "dropout_rate": float(y.mean()),
-        "random_state": dr.RANDOM_STATE,
-        "data_md5": data_md5,
-        "data_md5_matches_thesis": data_md5 == DATA_MD5_THESIS,
-        "libraries": lib_versions(),
-        "prototype": True,
-        "note": ("Artifact NGUYÊN MẪU. Xác suất cá nhân gần nhưng không trùng khít "
-                 "số OOF trong luận văn (khác biệt có chủ ý về phương pháp). "
-                 "Xuất lại sau khi phương pháp được đóng băng cuối cùng."),
-    }
-    (ART / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2))
+    manifest = build_manifest(
+        contract_version=CONTRACT_VERSION,
+        profile=scope, horizon=horizon,
+        n=int(len(y)), dropout_rate=float(y.mean()),
+        dataset_md5=data_md5,
+        dataset_md5_matches_thesis=(data_md5 == DATA_MD5_THESIS),
+        libraries=lib_versions(),
+        export_time_utc=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        research_commit=current_git_commit(str(THESIS_ROOT)),
+        random_state=dr.RANDOM_STATE,
+        prototype=True,
+    )
+    manifest["note"] = ("Artifact NGUYÊN MẪU. Xác suất cá nhân gần nhưng không trùng "
+                        "khít số OOF trong luận văn (khác biệt có chủ ý). Xuất lại "
+                        "bản chính thức sau khi phương pháp được đóng băng.")
+    (ART / "artifact.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
 
     print("[5/5] Kiểm tra nhanh trên chính tập huấn luyện (in-sample, chỉ để smoke-test) ...")
     p = calibrated.predict_proba(X)[:, 1]
     for thr, name in [(TIER1, "Tầng 1"), (TIER2, "Tầng 2")]:
         flagged = (p >= thr).mean()
         print(f"      {name} (p≥{thr:.2f}): gắn cờ {flagged*100:.1f}% quần thể")
-    if not metadata["data_md5_matches_thesis"]:
+    if not manifest["dataset_md5_matches_thesis"]:
         print(f"      ⚠️  MD5 dữ liệu ({data_md5}) KHÁC bản luận văn — kiểm tra lại nguồn dữ liệu.")
 
     print(f"\n✅ Xuất xong vào {ART}/  (scope={scope})")

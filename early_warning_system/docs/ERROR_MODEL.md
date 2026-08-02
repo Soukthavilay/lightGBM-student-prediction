@@ -9,12 +9,14 @@ EarlyWarningError                (gốc — bắt cái này = bắt mọi lỗi 
 ├── ValidationError              đầu vào sai (thiếu cột, sai kiểu, rỗng)
 ├── ArtifactMismatchError        artifact ≠ hợp đồng (phát hiện lúc NẠP)
 ├── PredictionError              suy luận hỏng SAU khi đầu vào đã hợp lệ
-└── ProfileNotFoundError         Profile/chân trời chưa có artifact
+├── ProfileNotFoundError         Profile/chân trời chưa có artifact
+└── ConfigurationError           cấu hình sai (tier1>tier2, ngưỡng ngoài [0,1], thiếu config)
 ```
 
 ## Nguyên tắc phân loại
 - **Lỗi của người dùng** (`ValidationError`, `ProfileNotFoundError`) — sửa được ở phía gọi. Trả lý do cụ thể, không đoán.
 - **Lỗi hệ thống** (`ArtifactMismatchError`, `PredictionError`) — người dùng không sửa được; log để vận hành xử lý.
+- **Lỗi cấu hình/triển khai** (`ConfigurationError`) — lộ ra lúc **khởi động/nạp config**, không theo từng yêu cầu. Bắt sớm, DỪNG luôn — không cho hệ thống chạy với cấu hình hỏng.
 
 ## Khi nào nâng lỗi nào
 
@@ -23,7 +25,8 @@ EarlyWarningError                (gốc — bắt cái này = bắt mọi lỗi 
 | CSV thiếu cột bắt buộc / rỗng / sai kiểu | `ValidationError` (kèm `ValidationReport`) | Validator, TRƯỚC khi dựng đặc trưng |
 | `is_compatible(artifact_version)` = False | `ArtifactMismatchError(expected, found)` | Loader, lúc nạp artifact |
 | MD5 dữ liệu artifact ≠ dữ liệu hiện tại | `ArtifactMismatchError` | Loader |
-| Yêu cầu Profile không tồn tại | `ProfileNotFoundError` | Điều phối, trước khi nạp |
+| Yêu cầu Profile không tồn tại | `ProfileNotFoundError` | ProfileResolver / điều phối |
+| tier1 > tier2, ngưỡng ngoài [0,1], thiếu config | `ConfigurationError` | Lúc dựng `TierConfig`/khởi động |
 | Nạp mô hình / tính SHAP thất bại | `PredictionError` | Predictor, trong lúc suy luận |
 
 ## Ánh xạ HTTP (cho Sprint 2 — chưa hiện thực)
@@ -33,6 +36,7 @@ EarlyWarningError                (gốc — bắt cái này = bắt mọi lỗi 
 | `ValidationError` | **422** Unprocessable Entity | `{error, report}` |
 | `ProfileNotFoundError` | **404** Not Found | `{error}` |
 | `ArtifactMismatchError` | **409** Conflict | `{error, expected, found}` |
+| `ConfigurationError` | **500** (thường chặn ở khởi động, không tới request) | `{error}` (chi tiết vào log) |
 | `PredictionError` | **500** Internal Server Error | `{error}` (chi tiết chỉ vào log) |
 
 ## Bất biến

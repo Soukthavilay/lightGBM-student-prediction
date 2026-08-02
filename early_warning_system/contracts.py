@@ -19,6 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol, Sequence, runtime_checkable
 
+from errors import ConfigurationError  # errors.py cũng thuần stdlib — không phá Rule #2
+
 # ─────────────────────────── Phiên bản hợp đồng ──────────────────────────────
 # SemVer. Quy ước tương thích: cùng số MAJOR ⇒ tương thích.
 # Artifact ghi lại phiên bản nó được xuất dựa trên; lúc nạp, so với hằng số này
@@ -54,10 +56,14 @@ class PredictionProfile:
     """Một cấu hình dự báo — hệ thống chỉ biết 'Profile', KHÔNG biết 'HK1'/'HK1-2'.
 
     Thêm chân trời mới (HK3, học kỳ 6…) = thêm một Profile, KHÔNG sửa kiến trúc.
-    `name` chỉ là nhãn hiển thị; logic không được rẽ nhánh theo giá trị của nó."""
+    `name` chỉ là nhãn hiển thị; logic không được rẽ nhánh theo giá trị của nó.
+
+    ⚠️ KHÔNG chứa đường dẫn/URI artifact. Vị trí lưu là *hạ tầng* (filesystem/S3/
+    registry), không thuộc domain — việc ánh xạ profile → vị trí do `ProfileResolver`
+    đảm nhiệm (xem ADR 0005). Nhờ vậy đổi filesystem sang S3 không đụng hợp đồng."""
+    id: str
     name: str
     horizon: int
-    artifact_dir: str
 
 
 @dataclass(frozen=True)
@@ -109,9 +115,19 @@ class ValidationReport:
 @dataclass(frozen=True)
 class TierConfig:
     """Ngưỡng hai tầng — THAM SỐ, không phải hằng số trong logic.
-    Mặc định khớp §3.11; đổi ngưỡng = đổi config, không đụng mã."""
+    Mặc định khớp §3.11; đổi ngưỡng = đổi config, không đụng mã.
+    Tự kiểm cấu hình: sai ngưỡng → ConfigurationError (không phải Validation/Prediction)."""
     tier1: float = 0.10
     tier2: float = 0.40
+
+    def __post_init__(self) -> None:
+        for name, v in (("tier1", self.tier1), ("tier2", self.tier2)):
+            if not (0.0 <= v <= 1.0):
+                raise ConfigurationError(f"Ngưỡng {name}={v} ngoài khoảng [0,1].")
+        if self.tier1 > self.tier2:
+            raise ConfigurationError(
+                f"tier1 ({self.tier1}) phải ≤ tier2 ({self.tier2}) — "
+                f"tầng sàng lọc rộng không được cao hơn tầng can thiệp sâu.")
 
 
 # ─────────────── Hợp đồng NỘI BỘ (các chặng — API không gọi) ──────────────────
@@ -120,6 +136,17 @@ class TierConfig:
 
 FeatureMatrix = Any
 RawRecords = Any
+
+
+ArtifactLocation = Any   # đường dẫn / URI / handle registry — kiểu là hạ tầng, để mờ
+
+
+@runtime_checkable
+class ProfileResolver(Protocol):
+    """Ánh xạ một Profile → vị trí artifact của nó. Che giấu hạ tầng lưu trữ
+    (filesystem/S3/registry) khỏi domain (ADR 0005). Nâng ProfileNotFoundError
+    nếu profile chưa có artifact."""
+    def resolve(self, profile: PredictionProfile) -> ArtifactLocation: ...
 
 
 @runtime_checkable
