@@ -4,55 +4,78 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A master's thesis project (Vietnamese) on **early prediction of university student dropout** using LightGBM. The intellectual core is **cohort- and horizon-aware modeling to prevent label leakage**: the goal is an *early-warning* model that, *at the end of semester h*, predicts which **still-enrolled** students will drop out *after* that point — using only data available up to semester h, not end-of-program data that trivially predicts dropout.
+A master's **đề án thạc sĩ** (Vietnamese) titled *"Ứng dụng LightGBM xây dựng mô hình dự báo và phát hiện nguyên nhân bỏ học của sinh viên"*.
 
-The work is split across three files that form one pipeline:
+Two halves, both named in the title:
+- **dự báo** — build and evaluate a LightGBM model that predicts student dropout.
+- **phát hiện nguyên nhân** — use SHAP to surface the *yếu tố nguy cơ* (risk factors) behind the prediction.
 
-1. **`dropout_research.py`** — the research module (v2, leakage-fixed). All modeling logic lives here: data loading, cohort/horizon labeling, feature building, models, cross-validation, CIs, DeLong test, nested CV, calibration, decision curve. Imported by `run_pipeline.py`; not run directly.
-2. **`run_pipeline.py`** — the compute driver. Runs the whole analysis on the new cohort/horizon definition and **writes every result table and checkpoint** into `05_KetQua_ThongKe/` and `06_TrungGian_Checkpoint/`.
-3. **`student_dropout_lightgbm.ipynb`** — the thesis narrative (a 14-step story). It **only reads** the pre-computed tables/checkpoints and renders figures + prose. This is the source of record for the thesis write-up, but it does **not** recompute the heavy results — `run_pipeline.py` does.
+> ⚠️ **This repo was re-scoped on 2026-08-10.** An earlier version framed the thesis around an anti-leakage / horizon-aware ("landmarking") research contribution on local data. The advisor rejected that framing. All code, results, and chapter drafts from that direction were deleted on 2026-08-11. Do not reintroduce `horizon_dataset`, `landmarking`, `mốc dự báo`-as-contribution, or the two-tier early-warning prototype unless the user explicitly asks.
+
+## Current direction
+
+- **Structure** follows a standard Vietnamese đề án skeleton, taken from two advisor-supplied templates in the repo root:
+  - `Đề-Án-NguyenThiPhucLoan-26B-phiên bản 18092025.docx` — closest parallel (stroke prediction with Ensemble XGBoost/LightGBM/CatBoost + SHAP)
+  - `Melasma_Thesis_Ngan__Copy_.pdf`
+  - Shared skeleton: **Phần mở đầu** (8 numbered items) → **Chương 1 Cơ sở lý thuyết** → **Chương 2 Dữ liệu và phát biểu bài toán** → **Chương 3 Thiết kế mô hình và thực nghiệm** → **Kết luận và kiến nghị**.
+- **Model focus:** LightGBM is the thesis model; XGBoost and CatBoost are comparison models; logistic regression and random forest are reference baselines.
+- **Data:** the Kaggle/UCI benchmark set is the main training data. `Testkhoa.csv` (local Vietnamese registry data) is reserved for a later test/validation step — **the method for combining the two is still unconfirmed with the advisor.** The two sets have completely different feature schemas, so a single train-on-Kaggle/test-on-Testkhoa transfer is not possible; the likely intent is two separate experiments sharing one pipeline.
 
 ## Data
 
-- **`Testkhoa.csv`** — the real Vietnam dataset. **Encoding is `latin-1`**, not UTF-8 — reading as UTF-8 corrupts Vietnamese text. `dropout_research.py` depends on this, and its label maps deliberately contain mojibake keys (e.g. `"Y?u"`, `"Xu?t s?c"`) to match the raw bytes.
-- The raw file has **7,523 rows**. After filtering to the two cohorts with full 4-semester data (`COHORT_YEARS = (2020, 2021)`; 9 students from 2022–2023 are dropped on load), the working set is **7,514 students, dropout rate ≈ 13.1%**. Note the horizon-restricted analysis sets are smaller still: **HK1 n=7,367 (11.5% dropout)** and **HK1-2 n=7,034 (7.4%)** — do not mix these three figures.
-- Columns: `StudentID`, demographics (`Gender`, `Nation`, `Religion`, `Region`, `Aspiration`, `IndustryCode`), entrance scores (`EntranceScore_1..3`, `SumScore`), and per-semester blocks for 4 terms (`GPA4_i`, `Rating_i`, `CreditsRegistered_i`, `CreditsEarnned_i` [sic — double-n], `TermStatus_i`). Target is `Drop`.
+- **`data/student's dropout dataset.csv`** — the Kaggle/UCI set "Predict Students' Dropout and Academic Success" (Realinho et al.). **Separator is `;`**, not comma. 4.424 students, 36 features, 3-class target `{Dropout, Graduate, Enrolled}`. One column name carries a stray tab (`Daytime/evening attendance\t`) — strip column names on load. `Nacionality` is misspelled in the source and is renamed to `Nationality`.
+- **`Testkhoa.csv`** — local Vietnamese registry data, 7.523 rows. **Encoding is `latin-1`**, not UTF-8 — reading as UTF-8 corrupts Vietnamese text. Not currently used by the notebook.
 
-## Running the pipeline
+Target is binarised as `Dropout = 1, else = 0`. The notebook also reports a sensitivity variant that drops the `Enrolled` group entirely (§2.10).
+
+## Running the work
+
+Everything lives in **`Student_Perfor.ipynb`** — there is no separate pipeline script. Open it and **Restart Kernel → Run All**.
 
 ```bash
-pip install lightgbm scikit-learn pandas numpy shap optuna joblib
-
-python3 run_pipeline.py --fast   # ~5-10 min: smoke-test that the pipeline runs end-to-end
-python3 run_pipeline.py          # full thesis run (~1-2 hours); overwrites files in the two output dirs
+python3 -m pip install lightgbm xgboost catboost shap scikit-learn pandas numpy matplotlib plotly kaleido
 ```
 
-Then open `student_dropout_lightgbm.ipynb` → **Restart Kernel → Run All** to re-render the narrative and figures against the freshly generated tables.
+Notebook layout:
+- **cells 0–40 — EDA** (kept from the student's original Colab work): distributions, gender/course/marital/financial breakdowns, correlation heatmap. Feeds Chương 2.
+- **cells 41+ — "PHẦN 2"**: the modelling pipeline. Feeds Chương 3.
 
-There is **no test suite, linter, or build step** — this is research code. Verification is running `run_pipeline.py --fast` and inspecting the printed metrics, then re-running the notebook. `RANDOM_STATE = 42` everywhere; reproducibility matters for the thesis.
+The hyperparameter-tuning cell (§2.6) runs 20 configurations × 5 folds × 3 models and takes a few minutes. Results are written to `08_KetQua_Kaggle/` by the last code cell.
 
-## Architecture of `dropout_research.py`
+`RANDOM_STATE = 42` everywhere; reproducibility matters for the thesis. There is no test suite or linter — verification is running the notebook and inspecting the printed metrics.
 
-The leakage fix (v2) is the whole point. Key stages:
+## Four methodological fixes (do not silently revert these)
 
-1. **Cohort + horizon labeling** — `semester_active(df, k)` marks students still active at semester k (proxy: `CreditsRegistered_k > 0`). `horizon_dataset(df, horizon)` keeps **only students active at semester `horizon`**, and the label becomes "drops out *after* the end of HK `horizon`". This is what prevents the leak: students who already left before HK h are excluded, so their HK-h features (GPA=0, 0 credits) can't act as a label proxy.
-2. **`build_features_raw(df, horizon)`** — builds features from **terms 1..horizon only**, plus cumulative aggregates (GPA mean/min/trend/std, cumulative credit rate, cumulative warnings). Semesters that are not active → `NaN` (not 0), to separate "no data" from "failed everything"; LightGBM handles `NaN` natively, baselines impute in-fold.
-3. **Models & evaluation** — `make_models()` builds LightGBM (`make_lgbm`, class imbalance via `is_unbalance=True`, computed in-fold) plus sklearn baselines. `repeated_oof` / `evaluate_with_ci` produce repeated stratified OOF predictions with bootstrap CIs (`bootstrap_ci_metrics`). `delong_test` / `paired_model_test` do significance testing. `nested_cv_lgbm` (Optuna inner loop) checks for tuning-induced optimism. `oof_calibrated`, `decision_curve`, `expected_calibration_error` cover calibration and clinical/policy utility.
+The notebook's PHẦN 2 deliberately departs from the student's original Colab modelling section. Each was verified numerically before being adopted:
 
-`run_pipeline.py` runs scopes `{"HK1": 1, "HK1-2": 2}` (the "full" 4-term scope is reference-only and deliberately leaks) and writes: `metrics_with_ci.csv`, `model_significance.csv`, `nested_cv_results.csv` + `nested_best_params.pkl`, `calibration.pkl`, `decision_curve.csv`, `temporal_ci.csv`, `fairness_ci.csv`, `shap_stability.csv`.
+1. **AUC/AP are computed from `predict_proba()`, never `predict()`.** Feeding hard 0/1 labels to `roc_curve` yields a single-operating-point curve and understates AUC (0,86 vs 0,93 on this data). The original notebook reported 0,78 this way.
+2. **The `Curricular units` feature group is kept**, not dropped for high correlation. Tree models make no independence assumption, and this is the strongest predictive block (AUC 0,891 → 0,908 when retained).
+3. **No `StandardScaler` for tree models**, which are invariant to monotone transforms. For the baselines, scaling lives *inside* a `Pipeline` so it only ever fits on the training fold. The original scaled the full dataset before splitting, leaking test-set information.
+4. **Nominal codes are declared `category`** (`Course` = 1..17 etc.) so the boosting models handle them natively instead of treating them as continuous.
+
+Also: model selection uses **`roc_auc`**, not accuracy — the data is imbalanced (32,1% dropout, so a constant predictor already scores 67,9%). All three boosters get the **same tuning budget** so the comparison stays fair.
 
 ## Key conventions
 
-- **Horizon-aware + cohort-strict = anti-leakage.** Two independent guards: (a) restrict the cohort to students active at horizon h (`horizon_dataset`), and (b) build features only from terms `1..h` (`build_features_raw`). Any feature touching term `i > horizon`, or any student not active at h, is a leak. The file header of `dropout_research.py` documents the fixes as `### [SỬA n]` markers.
-- **Two assumptions to verify with the registrar** (document in the thesis limitations): (a) "active at HK k" ≈ `CreditsRegistered_k > 0` — replace with an official withdrawal date if available; (b) `TermStatus_k` is treated as a known academic-warning feature — if it actually encodes "already withdrawn", set `DROP_TERMSTATUS = True` in `dropout_research.py`, because then it is a disguised label.
-- **The notebook does not compute — it reads.** Change modeling logic in `dropout_research.py`, regenerate with `run_pipeline.py`, then re-run the notebook. Editing numbers in the notebook directly will desync it from the tables.
-- Comments, prints, and docs are in Vietnamese — match that when editing these files.
+- **Comments, prints, markdown, and figure labels are in Vietnamese.** Match that when editing. Thai is used only for chat with the user.
+- **CatBoost quirk:** `cat_features` must be passed to `fit()`, *not* to the constructor. CatBoost mutates that parameter internally, which breaks `sklearn.base.clone()` — and `clone()` is required by every scikit-learn hyperparameter search. The notebook's `fit_model()` helper encapsulates this.
+- **Honest framing of the model comparison.** The three boosters land within ~0,001 AUC of each other on internal CV; XGBoost sometimes edges ahead on the test split. The thesis does **not** claim LightGBM is the most accurate. It is chosen for: best F1/accuracy at the operating threshold, native categorical and missing-value handling, training speed, and `TreeExplainer` compatibility for the SHAP half of the title.
+- **SHAP wording.** SHAP describes *model behaviour*, so findings are stated as *yếu tố nguy cơ có liên hệ*, never as proven causes — even though the title says "nguyên nhân".
+- **Do not invent numbers or citations.** Mark gaps as `TODO` / `[cần bổ sung]` instead.
 
 ## Repository layout
 
-- `02_TaiLieu_ThamKhao/` — reference papers (PDF)
-- `03_KetQua_Hinh/` — exported figures (`fig_*.png`) rendered by the notebook; `nang_cap_thong_ke/` holds the statistical-upgrade figures
-- `05_KetQua_ThongKe/` — result tables with confidence intervals (`*.csv`), written by `run_pipeline.py`
-- `06_TrungGian_Checkpoint/` — intermediate pickles (`calibration.pkl`, `nested_best_params.pkl`), written by `run_pipeline.py`
-- `_LuuTru_backup_*.ipynb` (repo root) — notebook backups from earlier stages
-- `README.md` — Vietnamese directory map (note: it still references a planned `khung_da_quoc_gia/` framework and an `01_DeAn_BaoCao/` report that do not exist in the repo yet)
+- `Student_Perfor.ipynb` — the single source of truth for all analysis
+- `data/` — Kaggle dataset · `Testkhoa.csv` (root) — local data, reserved
+- `02_TaiLieu_ThamKhao/` — reference PDFs and `anchor_refs.bib`. **The .bib still holds the old direction's anchors** (Kaufman leakage, van Houwelingen landmarking, TRIPOD…). Still missing for the new direction: XGBoost (Chen & Guestrin 2016), CatBoost (Prokhorenkova 2018), and the dataset paper (Realinho et al. 2022).
+- `03_KetQua_Hinh/kaggle/` — figures exported from the notebook
+- `08_KetQua_Kaggle/` — result tables (`model_comparison_all.csv`, `target_comparison.csv`, `best_params_all.csv`, `shap_importance_{lightgbm,xgboost,catboost}.csv`)
+- `07_BanThao_LuanVan/` — thesis drafts for the **new** direction only:
+  - `_DanBai_Moi_DeAn_2026-08-10.md` — the outline mapping every section to its source
+  - `Moi_PhanMoDau_draft.md` — PHẦN MỞ ĐẦU, drafted
+  - `RaSoat_TiengViet_LuanVan.docx` — a reviewer's Vietnamese-language critique of the old draft. The *language* lessons still apply: prefer short sentences, avoid em-dash-enclosed clauses, keep one term per concept, and distinguish `độ chính xác tổng thể` (accuracy) from `độ chính xác dương tính` (precision).
+There is deliberately no `README.md` or task checklist — both were written for the old direction and were deleted rather than rewritten. This file is the only project-level documentation.
+
+## Status
+
+Chương 1, 2, 3 and Kết luận are **not yet written**. PHẦN MỞ ĐẦU exists in draft and needs real citations added to item 2 (Tổng quan tình hình nghiên cứu) — the templates cite ~8 specific studies with author, year and reported accuracy, and the current draft has none.
