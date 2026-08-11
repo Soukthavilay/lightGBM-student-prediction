@@ -1,37 +1,33 @@
 feature,mean_abs_shap
-Curricular units 2nd sem (approved),0.9571930364482663
-Tuition fees up to date,0.4700432886714593
-Curricular units 1st sem (approved),0.2910072091739508
-Curricular units 2nd sem (grade),0.2298522338649746
-Course,0.22035437698532562
-Application mode,0.18550206216696083
-Curricular units 2nd sem (enrolled),0.1754070749614055
-Age at enrollment,0.15000579113710857
-Scholarship holder,0.13744086282004023
-Gender,0.11107208555862438
-Debtor,0.09879823290551583
-Curricular units 1st sem (grade),0.09738312879176397
-Unemployment rate,0.09038676625406813
-Mother's qualification,0.08484158427747132
-Previous qualification (grade),0.07162962850195675
-Curricular units 1st sem (enrolled),0.07101647060878688
-Application order,0.06750872576812267
-Admission grade,0.06747811277716892
-GDP,0.06408214425232114
-Mother's occupation,0.06125516774361361
-Father's occupation,0.060932162858280445
-Curricular units 2nd sem (evaluations),0.05459922398271689
-Father's qualification,0.04594346171657072
-Curricular units 2nd sem (credited),0.04582414815978594
-Previous qualification,0.044550232741975546
-Curricular units 1st sem (evaluations),0.03961360230938804
-Displaced,0.03309808718195166
-Inflation rate,0.02445905730653863
-Marital status,0.02421621074176661
-Nationality,0.012908153545606805
-Curricular units 1st sem (without evaluations),0.01110851292892227
-Daytime/evening attendance,0.006297398038309848
-Curricular units 1st sem (credited),0.005961460263872231
-Curricular units 2nd sem (without evaluations),0.003620558455800994
-Educational special needs,0.001166086529989016
-International,0.0006804742163320135
+Curricular units 2nd sem (approved),0.9442822914326175
+Tuition fees up to date,0.3444225533055157
+Curricular units 1st sem (approved),0.27323427360725877
+Curricular units 2nd sem (grade),0.2628368324801944
+Course,0.18272550475506075
+Age at enrollment,0.14880017024164754
+Application mode,0.12758763874550078
+Curricular units 2nd sem (enrolled),0.1014501791296225
+Scholarship holder,0.0908650733864144
+Curricular units 1st sem (grade),0.08852494870258319
+Debtor,0.0815500764188233
+Mother's occupation,0.07046987286181634
+Father's qualification,0.06528039850996709
+Displaced,0.05990416096880492
+Mother's qualification,0.059326350776019415
+Curricular units 1st sem (enrolled),0.05841124736083882
+Previous qualification (grade),0.04845424649698646
+Admission grade,0.04589620423756902
+Application order,0.042136319044780976
+Father's occupation,0.041578166601589306
+Gender,0.04068817465416774
+Curricular units 2nd sem (credited),0.035342440855854584
+Curricular units 1st sem (evaluations),0.0327241496480068
+Previous qualification,0.02968801923258633
+Curricular units 1st sem (credited),0.021799339279404483
+Curricular units 2nd sem (evaluations),0.019782963362486774
+Marital status,0.017725029864869072
+Curricular units 1st sem (without evaluations),0.01742946862309907
+Curricular units 2nd sem (without evaluations),0.004103747625714505
+International,0.0
+Educational special needs,0.0
+Daytime/evening attendance,0.0

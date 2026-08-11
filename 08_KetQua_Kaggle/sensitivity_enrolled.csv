@@ -1,0 +1,3 @@
+Variant,Train n,Test n,AUC,Recall
+Enrolled kept as 0 (main analysis),2918,843,0.9004,0.75
+Enrolled removed (Dropout vs Graduate),2385,698,0.9397,0.8199

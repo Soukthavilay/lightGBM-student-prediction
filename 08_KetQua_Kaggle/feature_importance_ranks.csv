@@ -1,0 +1,33 @@
+feature,Logistic Regression,Decision Tree,SVC,LightGBM,XGBoost,CatBoost,Mean rank
+Curricular units 2nd sem (approved),1,1,1,1,1,1,1.0
+Tuition fees up to date,4,2,2,4,2,2,2.7
+Curricular units 1st sem (approved),3,4,4,8,14,4,6.2
+Curricular units 2nd sem (grade),6,5,5,5,18,3,7.0
+Course,14,3,8,9,6,5,7.5
+Curricular units 2nd sem (enrolled),2,11,3,14,13,6,8.2
+Curricular units 1st sem (enrolled),17,18,6,9,3,10,10.5
+Age at enrollment,9,6,13,2,25,8,10.5
+Curricular units 2nd sem (credited),5,9,17,19,4,19,12.2
+Curricular units 2nd sem (evaluations),7,10,7,6,21,26,12.8
+Debtor,15,20,12,11,7,18,13.8
+Curricular units 1st sem (grade),8,19,9,12,26,13,14.5
+Mother's occupation,11,21,10,27,17,9,15.8
+Curricular units 1st sem (credited),10,21,11,24,12,24,17.0
+Father's occupation,32,14,21,16,11,11,17.5
+Admission grade,28,8,26,3,29,14,18.0
+Mother's qualification,18,21,19,25,15,16,19.0
+Previous qualification,19,12,28,28,5,23,19.2
+Gender,16,21,14,15,23,27,19.3
+Father's qualification,21,17,30,21,16,12,19.5
+Application mode,25,16,29,21,19,7,19.5
+Displaced,12,21,15,18,31,21,19.7
+Previous qualification (grade),27,21,22,7,28,15,20.0
+Scholarship holder,13,21,20,19,27,20,20.0
+Application order,24,7,31,16,22,22,20.3
+Curricular units 1st sem (evaluations),30,21,18,13,24,17,20.5
+International,22,21,16,28,8,30,20.8
+Curricular units 1st sem (without evaluations),23,13,32,23,9,28,21.3
+Marital status,29,15,25,28,20,25,23.7
+Educational special needs,31,21,27,28,10,30,24.5
+Curricular units 2nd sem (without evaluations),20,21,24,25,32,29,25.2
+Daytime/evening attendance,26,21,23,28,30,30,26.3

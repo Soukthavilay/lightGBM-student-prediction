@@ -1,37 +1,33 @@
 feature,mean_abs_shap
-Curricular units 2nd sem (approved),1.197146
-Tuition fees up to date,0.41484085
-Course,0.37258315
-Curricular units 1st sem (approved),0.32931736
-Age at enrollment,0.23385957
-Curricular units 2nd sem (grade),0.2328333
-Mother's qualification,0.15681621
-Father's occupation,0.15500274
-Unemployment rate,0.15281855
-Application mode,0.1244819
-Scholarship holder,0.12361113
-Gender,0.11918111
-Curricular units 2nd sem (evaluations),0.11730763
-Curricular units 2nd sem (enrolled),0.1067976
-Admission grade,0.10162263
-Curricular units 1st sem (enrolled),0.094779484
-Previous qualification (grade),0.09417784
-Curricular units 1st sem (grade),0.0894376
-Debtor,0.0869155
-Mother's occupation,0.083192036
-Application order,0.07855942
-Father's qualification,0.07462958
-Curricular units 1st sem (evaluations),0.07194568
-Displaced,0.0693033
-GDP,0.059944134
-Curricular units 2nd sem (credited),0.059231784
-Inflation rate,0.046226855
-Previous qualification,0.0303844
-Curricular units 1st sem (credited),0.021187102
-Curricular units 1st sem (without evaluations),0.014904432
-Curricular units 2nd sem (without evaluations),0.0030219194
-Marital status,0.0024491972
-Daytime/evening attendance,0.0021954647
-Nationality,0.0013527405
-International,0.0
-Educational special needs,0.0
+Curricular units 2nd sem (approved),2.0983357
+Tuition fees up to date,0.5839202
+Course,0.57492167
+Curricular units 1st sem (approved),0.38172293
+Curricular units 2nd sem (grade),0.32674003
+Father's occupation,0.29447088
+Age at enrollment,0.236994
+Mother's occupation,0.22012033
+Mother's qualification,0.21518283
+Curricular units 2nd sem (evaluations),0.20613346
+Admission grade,0.20327964
+Application mode,0.20188755
+Gender,0.19837517
+Curricular units 1st sem (grade),0.19080205
+Father's qualification,0.18256693
+Previous qualification (grade),0.16467242
+Curricular units 1st sem (enrolled),0.14045031
+Curricular units 2nd sem (enrolled),0.13821526
+Displaced,0.12450073
+Debtor,0.1213269
+Curricular units 1st sem (evaluations),0.12011977
+Application order,0.08446778
+Curricular units 2nd sem (credited),0.07263536
+Previous qualification,0.06728903
+Curricular units 1st sem (without evaluations),0.049963154
+Scholarship holder,0.045918304
+Curricular units 1st sem (credited),0.039837882
+Marital status,0.013540348
+Curricular units 2nd sem (without evaluations),0.007591324
+International,0.002482302
+Daytime/evening attendance,0.0020000397
+Educational special needs,0.00040582713
