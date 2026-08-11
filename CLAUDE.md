@@ -30,11 +30,27 @@ Target is binarised as `Dropout = 1, else = 0`. The notebook also reports a sens
 
 ## Running the work
 
-Everything lives in **`Student_Perfor.ipynb`** — there is no separate pipeline script. Open it and **Restart Kernel → Run All**.
+Everything lives in **`Student_Perfor.ipynb`** — there is no separate pipeline script. Open the **`Thesis/` folder** in VS Code (not a parent folder — the notebook reads `data/…` by relative path), then **Restart Kernel → Run All**. Verified end to end: 44/44 code cells, 0 errors, ~6 minutes.
+
+### Kernel — this machine has three Pythons and only one works
+
+| interpreter | state |
+|---|---|
+| `/usr/bin/python3` (3.9.6, = the Xcode-bundled binary) | **has every package** — the one to use |
+| `/opt/homebrew/bin/python3` (3.14) | empty; plain `python3` kernelspec resolves here and fails at `import plotly` |
+| `Master_Class/student/.venv` (3.14) | has plotly/lightgbm but **not** xgboost, catboost, shap |
+
+A kernel named **`thesis-lightgbm`** ("Python (Thesis LightGBM)") is registered against the working interpreter, and the notebook's `kernelspec` points at it — VS Code should select it automatically. If the packages ever go missing, re-register with:
 
 ```bash
-python3 -m pip install lightgbm xgboost catboost shap scikit-learn pandas numpy matplotlib plotly kaleido
+/usr/bin/python3 -m ipykernel install --user --name thesis-lightgbm --display-name "Python (Thesis LightGBM)"
 ```
+
+```bash
+/usr/bin/python3 -m pip install lightgbm xgboost catboost shap scikit-learn pandas numpy matplotlib plotly kaleido
+```
+
+Note there is no `pip` on PATH — always use `python3 -m pip`. `nbconvert --execute` is broken in this environment (`RuntimeError: no running event loop` from jupyter_core on 3.9); to verify the notebook headlessly, drive `nbclient.NotebookClient` from inside `asyncio.run()` and set `resources={"metadata": {"path": <notebook dir>}}` so relative data paths resolve.
 
 Notebook layout:
 - **cells 0–40 — EDA** (kept from the student's original Colab work): distributions, gender/course/marital/financial breakdowns, correlation heatmap. Feeds Chương 2.
