@@ -1,0 +1,3 @@
+Stage,Synthetic rows,Exact duplicates of a test student,Near-duplicates,Median dist. to nearest synthetic
+before cleaning,76518,11,32,1.257
+after cleaning,76480,0,0,1.269

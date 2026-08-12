@@ -1,4 +1,4 @@
 Model,Validation AUC,Best params
-LightGBM,0.9433,"{'learning_rate': 0.05, 'n_estimators': 50, 'max_depth': 5}"
-XGBoost,0.9427,"{'learning_rate': 0.1, 'n_estimators': 150, 'max_depth': 10}"
-CatBoost,0.9437,"{'learning_rate': 0.05, 'iterations': 200, 'depth': 5}"
+LightGBM,0.9186,"{'learning_rate': 0.1, 'n_estimators': 100, 'max_depth': 3}"
+XGBoost,0.9183,"{'learning_rate': 0.05, 'n_estimators': 200, 'max_depth': 3}"
+CatBoost,0.9174,"{'learning_rate': 0.05, 'iterations': 150, 'depth': 10}"

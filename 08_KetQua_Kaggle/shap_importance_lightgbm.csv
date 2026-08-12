@@ -1,33 +1,33 @@
 feature,mean_abs_shap
-Curricular units 2nd sem (approved),1.0809041418668177
-Tuition fees up to date,0.2228860391218436
-Course,0.2120569295460315
-Curricular units 1st sem (approved),0.1313920097116236
-Age at enrollment,0.10399206005095701
-Curricular units 2nd sem (grade),0.10200945860674758
-Curricular units 1st sem (enrolled),0.08362624292881689
-Father's occupation,0.06675693382421695
-Curricular units 2nd sem (evaluations),0.0619675788125185
-Debtor,0.0558300027840912
-Curricular units 1st sem (evaluations),0.05563416242600204
-Application mode,0.042160587305800364
-Gender,0.04037349712894246
-Father's qualification,0.039248785053678945
-Curricular units 2nd sem (enrolled),0.03921218413256641
-Admission grade,0.037782860846641605
-Curricular units 2nd sem (credited),0.03338970039501085
-Curricular units 1st sem (grade),0.03219208028553654
-Scholarship holder,0.029467467329377293
-Displaced,0.026980222519621084
-Previous qualification (grade),0.02517580156822688
-Curricular units 1st sem (without evaluations),0.019002604448179104
-Application order,0.010833736666457327
-Mother's qualification,0.008538726495500483
-Curricular units 1st sem (credited),0.007099349419424921
-Mother's occupation,0.00560274559668548
-Curricular units 2nd sem (without evaluations),0.0018253859572134386
-International,0.0
+Curricular units 2nd sem (approved),1.1013770321199696
+Tuition fees up to date,0.3861904916406582
+Curricular units 1st sem (approved),0.2736528492671544
+Course,0.26979383789774186
+Age at enrollment,0.21155886916357738
+Father's occupation,0.16740455272455604
+Curricular units 2nd sem (grade),0.1627615507712569
+Mother's occupation,0.13969253862050116
+Scholarship holder,0.13852489197048218
+Application mode,0.11802013067884533
+Curricular units 2nd sem (enrolled),0.10347913050157023
+Curricular units 1st sem (enrolled),0.10059129773648715
+Mother's qualification,0.09891135249959018
+Gender,0.09377346448246973
+Debtor,0.08876644548934857
+Curricular units 2nd sem (evaluations),0.08299138416945122
+Curricular units 1st sem (grade),0.07935151386170679
+Curricular units 2nd sem (credited),0.06561406125127804
+Admission grade,0.06041838522937104
+Father's qualification,0.05322157380562396
+Previous qualification (grade),0.04713250211251255
+Application order,0.046203769863275956
+Curricular units 1st sem (evaluations),0.02958243851436375
+Previous qualification,0.02858271222105864
+Displaced,0.024087013400203586
+Curricular units 1st sem (without evaluations),0.021891569453982518
+Curricular units 1st sem (credited),0.016725473479869697
+Curricular units 2nd sem (without evaluations),0.008484681411276644
+International,0.007797844028098648
+Daytime/evening attendance,0.0016055767964417112
 Educational special needs,0.0
-Previous qualification,0.0
-Daytime/evening attendance,0.0
 Marital status,0.0

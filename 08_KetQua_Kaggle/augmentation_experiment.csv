@@ -1,0 +1,13 @@
+Variant,Model,Train n,AUC,AP,Recall,Precision,F1,Leakage check
+A - real only,LightGBM,3539,0.9323,0.9013,0.831,0.7738,0.8014,PASS
+A - real only,XGBoost,3539,0.9304,0.9018,0.8345,0.7822,0.8075,PASS
+A - real only,CatBoost,3539,0.9316,0.9026,0.7993,0.7909,0.7951,PASS
+B - real + synthetic,LightGBM,80019,0.9364,0.9105,0.8486,0.8169,0.8325,PASS
+B - real + synthetic,XGBoost,80019,0.9366,0.9106,0.8521,0.8121,0.8316,PASS
+B - real + synthetic,CatBoost,80019,0.9389,0.9132,0.8415,0.827,0.8342,PASS
+C - real + synthetic (re-weighted),LightGBM,80019,0.9358,0.9079,0.8415,0.8129,0.827,PASS
+C - real + synthetic (re-weighted),XGBoost,80019,0.9352,0.9101,0.8451,0.7973,0.8205,PASS
+C - real + synthetic (re-weighted),CatBoost,80019,0.9368,0.9113,0.831,0.8166,0.8237,PASS
+D - synthetic only,LightGBM,76480,0.937,0.9103,0.8415,0.8157,0.8284,PASS
+D - synthetic only,XGBoost,76480,0.9362,0.9103,0.8451,0.8136,0.829,PASS
+D - synthetic only,CatBoost,76480,0.9403,0.9151,0.8451,0.8276,0.8362,PASS
