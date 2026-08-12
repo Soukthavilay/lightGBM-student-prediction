@@ -1,0 +1,11 @@
+Rank,Portugal (UCI),theme (PT),Vietnam (Testkhoa),theme (VN)
+1,Curricular units 2nd sem (approved),credits passed,GPA4_2,grades
+2,Tuition fees up to date,finance,IndustryCode,programme
+3,Curricular units 1st sem (approved),credits passed,CreditsEarnned_2,credits passed
+4,Course,programme,GPA4_1,grades
+5,Age at enrollment,demographics,CreditsEarnned_1,credits passed
+6,Father's occupation,-,EntranceScore_1,intake score
+7,Curricular units 2nd sem (grade),grades,SumScore,intake score
+8,Mother's occupation,-,EntranceScore_3,intake score
+9,Scholarship holder,finance,Region,demographics
+10,Application mode,-,EntranceScore_2,intake score

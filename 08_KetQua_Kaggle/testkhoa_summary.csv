@@ -1,0 +1,5 @@
+Experiment,n,AUC,Note
+Transfer — UCI model applied to Testkhoa,7523,0.9426,"8/32 features available, no retraining"
+Transfer — renamed but not rescaled,7523,0.9006,shows renaming alone is not enough
+Replication — LightGBM refitted on Testkhoa (10-fold CV),7523,0.9543,"+/- 0.0082, 19 Vietnamese features"
+Reference — LightGBM on the Portuguese holdout,885,0.9323,"same model, home data"

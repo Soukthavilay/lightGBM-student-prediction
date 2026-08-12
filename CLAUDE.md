@@ -19,18 +19,21 @@ Two halves, both named in the title:
   - `Melasma_Thesis_Ngan__Copy_.pdf`
   - Shared skeleton: **Phần mở đầu** (8 numbered items) → **Chương 1 Cơ sở lý thuyết** → **Chương 2 Dữ liệu và phát biểu bài toán** → **Chương 3 Thiết kế mô hình và thực nghiệm** → **Kết luận và kiến nghị**.
 - **Model focus:** LightGBM is the thesis model; XGBoost and CatBoost are comparison models; logistic regression and random forest are reference baselines.
-- **Data:** the Kaggle/UCI benchmark set is the main training data. `Testkhoa.csv` (local Vietnamese registry data) is reserved for a later test/validation step — **the method for combining the two is still unconfirmed with the advisor.** The two sets have completely different feature schemas, so a single train-on-Kaggle/test-on-Testkhoa transfer is not possible; the likely intent is two separate experiments sharing one pipeline.
+- **Data:** the Kaggle/UCI benchmark set is the training data; **`Testkhoa.csv` is the external validation set** (section 8 of the notebook, added 2026-08-12). The schemas differ, but nine features map with a unit conversion, which is enough for a real transfer test — see *External validation* below.
 
 ## Data
 
 - **`data/student's dropout dataset.csv`** — the Kaggle/UCI set "Predict Students' Dropout and Academic Success" (Realinho et al.). **Separator is `;`**, not comma. 4.424 students, 36 features, 3-class target `{Dropout, Graduate, Enrolled}`. One column name carries a stray tab (`Daytime/evening attendance\t`) — strip column names on load. `Nacionality` is misspelled in the source and is renamed to `Nationality`.
-- **`Testkhoa.csv`** — local Vietnamese registry data, 7.523 rows. **Encoding is `latin-1`**, not UTF-8 — reading as UTF-8 corrupts Vietnamese text. Not currently used by the notebook.
+- **`Testkhoa.csv`** — Vietnamese registry extract supplied by the advisor. 7.523 students, 33 columns, intakes 2020–2023, label `Drop` (13,2% positive). Read with `encoding='latin-1'`; the Vietnamese diacritics were **already destroyed at export** (`Nữ` is stored as the literal bytes `N?`), so no encoding recovers them — harmless for the columns used, but the text labels cannot be printed correctly.
+  Confirmed with the advisor on 2026-08-12: **`Drop = 1` means a voluntary withdrawal** (not dismissal, not transfer). That is why the model is worth building — it predicts a decision the institution can still influence — and why the financial variables that dominate the Portuguese model are plausible: unpaid fees are a reason to *decide* to leave.
 
-Target is binarised as `Dropout = 1, else = 0`. The notebook also reports a sensitivity variant that drops the `Enrolled` group entirely (§2.10).
+Target is binarised as `Dropout = 1, else = 0`. The notebook also reports a sensitivity variant that drops the `Enrolled` group entirely.
 
 ## Running the work
 
-Everything lives in **`Student_Perfor.ipynb`** — there is no separate pipeline script. Open the **`Thesis/` folder** in VS Code (not a parent folder — the notebook reads `data/…` by relative path), then **Restart Kernel → Run All**. Verified end to end: **72/72 code cells, 0 errors**, ~30 minutes (the 10-fold grid search dominates; set `CV_FOLDS = 5` in the CV-machinery cell to halve it).
+Everything lives in **`Student_Perfor.ipynb`** — there is no separate pipeline script. Open the **`Thesis/` folder** in VS Code (not a parent folder — the notebook reads `data/…` by relative path), then **Restart Kernel → Run All**. Verified end to end: **81/81 code cells, 0 errors**. First run ≈ 11 minutes; **every run after that ≈ 1 minute**, because the expensive work is cached (see *Caching* below).
+
+⚠️ **Restart the kernel, do not just Run All.** A kernel that once executed the old PySpark version still has Spark's `max`/`min`/`sum`/`round` shadowing the built-ins, and cells fail with `TypeError: max() takes 1 positional argument but 2 were given` even though the file contains no Spark at all.
 
 ### Kernel — this machine has three Pythons and only one works
 
@@ -54,11 +57,31 @@ Note there is no `pip` on PATH — always use `python3 -m pip`. `nbconvert --exe
 
 **The notebook is pure pandas + scikit-learn.** PySpark was removed on 2026-08-12 — see *Why Spark was dropped* below. Do not reintroduce it.
 
-Notebook layout (137 cells, 72 code):
-- **imports → data dictionary → cleaning → EDA** — target/age/gender/course/marital/financial breakdowns, correlation. Feeds Chương 2.
-- **feature selection → split → 10-fold CV (tuning + comparison) → holdout evaluation → SHAP → sensitivity → data augmentation → save**. Feeds Chương 3.
+**Notebook layout — 158 cells, 81 code, numbered sections.** Cell 0 is a table of contents; every heading carries a number, so `section 8` in prose points at a real place.
 
-Hyper-parameter tuning is 48 configurations × 10 folds × 3 boosters (~1.440 fits), plus a 20-depth CV sweep for the decision tree, 20 split seeds, and 4 augmentation variants × 3 boosters on ~79k rows. A full run is ~30 minutes. The last code cell writes every table to `08_KetQua_Kaggle/`; figures are written to `03_KetQua_Hinh/kaggle/` as they are produced.
+| No. | Section | Feeds |
+|---|---|---|
+| 0 | Setup, figure helper, colours | — |
+| 1 | The data — dictionary, cleaning, EDA by age / gender / programme / marital status / finances | Chương 2 |
+| 2 | Choosing the features — Pearson for numeric, Cramér's V for nominal | Chương 2 |
+| 3 | Building and comparing the models — split, 10-fold CV, sealed holdout | Chương 3 |
+| 4 | How much of the score is luck — 20 split seeds | Chương 3 |
+| 5 | Reading the model — threshold, importance ranks, ROC | Chương 3 |
+| 6 | SHAP — global, directional, per-student | Chương 3 |
+| 7 | Sensitivity — the `Enrolled` group | Chương 3 |
+| 8 | **External validation — 7.523 Vietnamese students** | Chương 3 |
+| 9 | Secondary — synthetic data (Playground S4E6) | Chương 3 |
+| 10 | Saving — 19 tables, 34 figures | — |
+
+The heavy parts are 48 configurations × 10 folds × 3 boosters (~1.440 fits), a 20-depth CV sweep, 20 split seeds, and 4 augmentation variants × 3 boosters on ~79k rows.
+
+### Caching (2026-08-12)
+
+Everything expensive is stored in **`09_MoHinh/`** by a `cached(name, build, extra)` helper and reloaded on the next run: the three tuning results (winning parameters **and** the per-fold AUC arrays), the six fitted models, the augmentation models, and the CV score arrays. A re-run drops from ~11 minutes to ~54 seconds.
+
+Each entry carries a **fingerprint** of the training pool, the holdout, `RANDOM_STATE`, `CV_FOLDS`, the grid, `feature_columns` and `CATEGORICAL_COLS`. If any of those change the entry is recomputed automatically and the cell prints `[cache] STALE`. Every cell prints `loaded` / `missing` / `disabled`, so it is always visible whether a number was recomputed.
+
+⚠️ **The fingerprint cannot see inside the model constructors.** After editing e.g. `max_iter`, `is_unbalance` or `class_weight`, bump `CACHE_VERSION` by one or set `USE_CACHE = False` for one run — otherwise stale numbers are served silently. `09_MoHinh/` is gitignored.
 
 ### Why Spark was dropped (2026-08-12)
 
@@ -88,12 +111,34 @@ Each was verified numerically before being adopted. Several were re-established 
 11. **Synthetic training data never enters the test set, and a leakage gate cleans the training pool before the experiment runs.** The Playground S4E6 file is generated *from the UCI dataset this study tests on*, and the hazard is real, not theoretical: **19 of the 843 test students appear verbatim in it**, and 35 land within 0,10 of a test student in standardised space. Exact matching alone is not sufficient (shifting one grade by 0,1 defeats it), so the gate uses nearest-neighbour distance, **removes the 40 offending synthetic rows** (0,05% of the file) and re-measures. Only a `PASS` makes the numbers reportable — a table marked `FAIL - do not report` must not reach Chương 3. Never re-run the augmentation section against the raw file without the gate.
 12. **The augmentation result is "no new information", and that is the finding.** On the frozen 843-student test set: LightGBM 0,9004 → 0,9033 and CatBoost 0,9041 → 0,9074 (both inside noise); XGBoost 0,8934 → 0,9294, but **variant D — trained on synthetic data ALONE, never seeing a real student — scores 0,9304, i.e. as well as or better than real+synthetic for all three models.** The 2.918 real students therefore add nothing once 76k generated rows are present, so XGBoost's gain is variance reduction on an over-deep configuration (max_depth 10), not new knowledge. The generator also flattens the rare groups the study cares about (`Curricular units credited` mean 0,54 → 0,14; `Debtor` 0,11 → 0,07; `Educational special needs` 0,01 → 0,00).
 13. **Feature importances are compared by RANK.** The six models report on six incompatible scales (split count / gain / PredictionValuesChange / impurity share / |coefficient|). The rank table is the comparable artefact; SHAP is the trustworthy one.
+14. **The Vietnamese file has its own leakage traps, and section 8 measures them before excluding anything.** `TermStatus_1…4` reproduce the label exactly — **on their own they reach AUC 1,0000**, and feeding the whole file in unchanged gives 0,9999. They are outcome records, not predictors. **Semesters 3–4 are also excluded**: among the students who left, 73% have a GPA of exactly 0 in semester 3 and 77% in semester 4, because they were no longer enrolled — a record of the outcome written after it happened. What remains, semesters 1–2 plus intake information, reaches 0,9555 honestly.
+    ⚠️ **Withdrawals happen inside the feature window.** 34% leave during semester 1, 48% during semester 2, 18% during semester 3, **none in semester 4**. The semester-2 figures of a student who left during semester 2 therefore already reflect that departure. The honest early-warning number is the **semester-1-only model, AUC 0,8134**; the 0,9555 is a description of who leaves, not a forecast made before they do. The UCI data has the same structure, so the two-country comparison stays like-for-like.
+15. **The label in `Testkhoa.csv` is final; no censoring correction is needed.** 99,9% of the file is the 2020 and 2021 intakes (3.414 and 4.100 students), each observed 3–4 years with 89–93% still registering in semesters 3–4, and their withdrawal rates are close (14,1% and 12,3%). The 2022 and 2023 rows are 8 and 1 students — data artefacts, not cohorts. This is **unlike** the `Enrolled` group in the UCI data, which is why that one needed a sensitivity analysis and this one does not.
+
+## External validation — the strongest result (section 8)
+
+Added 2026-08-12. Two experiments on `Testkhoa.csv`, answering different questions.
+
+**Experiment 1 — transfer.** The LightGBM fitted on 3.539 Portuguese students is applied unchanged to 7.523 Vietnamese students. Nine features map, with a unit conversion; **the other 23 are left missing**, including the whole financial block that ranks second in the model's own SHAP table. Result: **AUC 0,9426**.
+
+Renaming the columns is **not** enough. Renamed but not rescaled gives 0,9006, because the model learned that grades run 0–20 and reads a 4-point GPA of 2,31 as near-failure. The conversions are `GPA4 / 4 × 20`, `credits / median × 6`, `SumScore` min–max rescaled to 95–200; `IndustryCode` cannot map at all (**0 of 70 codes overlap** with UCI `Course`) and is left missing.
+
+**The ranking transfers, the probabilities do not.** The model is calibrated for a 32,1% base rate and applied to a 13,2% one, so at threshold 0,5 it flags **61% of the whole faculty**. Best F1 is at **0,8**. Any deployment has to re-threshold on a labelled cohort.
+
+**Experiment 2 — replication.** LightGBM refitted on Testkhoa itself, same protocol, semesters 1–2 only: **10-fold CV AUC 0,9543 ± 0,0082**. So the transferred model gives up only 0,012 against a model trained on the target country's own data.
+
+**The two countries agree on the theme, not the column.** No feature name is shared, yet both put first-year **credits passed and grades** at the top. The Portuguese model leans on **unpaid tuition**, which the Vietnamese registry does not record — that gap is itself a finding and a concrete recommendation for *Kiến nghị*: **collect it**.
+
+Set against section 9, where 76.518 *synthetic* rows drawn from the same source as the training data added nothing, the pair makes one point: **it is the reality of the data that matters, not its quantity.**
+
 
 ## Key conventions
 
 - **The notebook is entirely in English** — comments, prints, markdown and figure labels — because the advisor asked for it (*"các dữ liệu em chuyển sử dụng ngôn ngữ tiếng Anh nhé"*). The **thesis document** stays Vietnamese. Thai is used only for chat with the user.
-- **`from pyspark.sql.functions import *` shadows the built-ins** `max`, `min`, `sum`, `round`. Use `builtins.` explicitly for plain Python numbers — this has already caused one crash.
-- **CatBoost quirk:** `cat_features` must be passed to `fit()`, *not* to the constructor. CatBoost mutates that parameter internally, which breaks `sklearn.base.clone()` — and `clone()` is required by every scikit-learn hyperparameter search. `tune_by_auc(..., fit_kwargs={'cat_features': ...})` encapsulates this.
+- **One colour per outcome, defined once.** `TARGET_COLOURS` in the setup cell: **orange = Dropout, blue = Enrolled, green = Graduate** (Okabe-Ito, colour-blind safe). Every chart looks the colour up **by label**, never by position — the pie helpers receive `value_counts()` dictionaries whose key order follows frequency, so colouring by position gave the same outcome a different colour in each panel.
+- **Stale kernels still carry Spark's shadowed built-ins.** No Spark remains in the file, but a long-lived kernel that once ran the old version will still fail on `max(a, b)`. Restart the kernel rather than debugging the code.
+- **CatBoost quirk:** `cat_features` must be passed to `fit()`, *not* to the constructor. CatBoost mutates that parameter internally, which breaks `sklearn.base.clone()` — and cloning is what every fold of the cross-validation relies on. `tune_by_cv(..., fit_kwargs={'cat_features': ...})` encapsulates this.
+- **`Pipeline` hides the estimator.** `models_dict['Logistic Regression'].coef_` raises `AttributeError` now that the baselines are wrapped for CV; the feature-importance cell uses an `unwrap()` helper that reaches `named_steps['clf']`.
 - **Plotly figures are NOT stored in the .ipynb.** They vanish on export to PDF/Word. Every Plotly cell goes through the `save_fig(fig, name)` helper, which writes a PNG *and* displays; matplotlib cells call `plt.savefig(FIG_DIR / ...)` before `plt.show()`.
 - **Honest framing of the model comparison — the single-split number is mostly luck.** Refitting the same LightGBM on 20 different stratified splits of the same 4.424 students moves the test AUC over a range of **0,038** (mean 0,918 · std 0,009) — **wider than the entire six-model table**. The holdout figure the notebook reports (0,9323) sits at the **100th percentile** of that distribution, i.e. above all 20 other draws, partly because the hyper-parameters were tuned on that split's own folds.
   ➡️ **Quote the 10-fold cross-validated figure — LightGBM 0,9186 ± 0,0122 — not the holdout 0,9323**, and never rank two models on one split.
@@ -109,11 +154,12 @@ Each was verified numerically before being adopted. Several were re-established 
 ## Repository layout
 
 - `Student_Perfor.ipynb` — the single source of truth for all analysis
-- `data/` — Kaggle dataset · `Testkhoa.csv` (root) — local data, reserved
+- `data/` — Kaggle dataset · `Testkhoa.csv` (root) — the external validation set
   - **`data/playground_s4e6_train.csv`** — the 76.518-row synthetic training set from Kaggle *Playground Series S4E6*, downloaded by hand (there are no Kaggle credentials on this machine and the Kaggle connector is unauthenticated). Used for the *"tăng thêm dữ liệu cho huấn luyện"* experiment. The whole augmentation section skips cleanly if the file is removed, so Run All still passes without it.
 - `02_TaiLieu_ThamKhao/` — reference PDFs and `anchor_refs.bib`. **The .bib still holds the old direction's anchors** (Kaufman leakage, van Houwelingen landmarking, TRIPOD…). Still missing for the new direction: XGBoost (Chen & Guestrin 2016), CatBoost (Prokhorenkova 2018), and the dataset paper (Realinho et al. 2022).
-- `03_KetQua_Hinh/kaggle/` — 32 figures written by the notebook, numbered `01_`–`27_` in the order they appear. **Everything here is regenerated on every run**; nothing is hand-made.
-- `08_KetQua_Kaggle/` — 14 result tables, also regenerated on every run: `model_comparison_all.csv` · `cv_results.csv` · `best_params_all.csv` · `threshold_sweep.csv` · `sensitivity_enrolled.csv` · `feature_importance_ranks.csv` · `split_variation.csv` · `shap_importance_{lightgbm,xgboost,catboost}.csv` · `augmentation_{leakage_gate,experiment,shap_stability}.csv` · `distribution_real_vs_synthetic.csv`.
+- `03_KetQua_Hinh/kaggle/` — 34 figures written by the notebook, numbered `01_`–`29_` in the order they appear. **Everything here is regenerated on every run**; nothing is hand-made.
+- `09_MoHinh/` — the model / tuning cache (gitignored, ~13 MB, rebuilt by deleting it).
+- `08_KetQua_Kaggle/` — 19 result tables, also regenerated on every run: `model_comparison_all.csv` · `cv_results.csv` · `best_params_all.csv` · `threshold_sweep.csv` · `sensitivity_enrolled.csv` · `feature_importance_ranks.csv` · `split_variation.csv` · `shap_importance_{lightgbm,xgboost,catboost}.csv` · `testkhoa_{summary,transfer,thresholds,shap_importance,vs_uci_top10}.csv` · `augmentation_{leakage_gate,experiment,shap_stability}.csv` · `distribution_real_vs_synthetic.csv`.
   ⚠️ Any file in these two folders that the notebook does **not** write is stale output from a deleted notebook — check before citing a number from one.
 - `07_BanThao_LuanVan/` — thesis drafts for the **new** direction only:
   - `_DanBai_Moi_DeAn_2026-08-10.md` — the outline mapping every section to its source
@@ -121,6 +167,35 @@ Each was verified numerically before being adopted. Several were re-established 
   - `RaSoat_TiengViet_LuanVan.docx` — a reviewer's Vietnamese-language critique of the old draft. The *language* lessons still apply: prefer short sentences, avoid em-dash-enclosed clauses, keep one term per concept, and distinguish `độ chính xác tổng thể` (accuracy) from `độ chính xác dương tính` (precision).
 There is deliberately no `README.md` or task checklist — both were written for the old direction and were deleted rather than rewritten. This file is the only project-level documentation.
 
+## Scope — this is an *đề án*, not a *luận văn*
+
+Raised by the user on 2026-08-12, and it should govern everything from here. Measured from the advisor's own template (`Đề-Án-NguyenThiPhucLoan…docx`, page numbers from its table of contents):
+
+| Part | Pages | Share |
+|---|---|---|
+| MỞ ĐẦU | 12–17 | 6 |
+| **CHƯƠNG 1 Cơ sở lý thuyết** | **18–68** | **51 — 65% of the body** |
+| CHƯƠNG 2 Dữ liệu | 69–80 | 12 |
+| **CHƯƠNG 3 Thực nghiệm** | **81–87** | **7** |
+| KẾT LUẬN | 88–89 | 2 |
+
+Chương 1 breaks down as: domain ≈ 15 pages · Ensemble learning ≈ 12 · XGBoost 4 · LightGBM 3 · CatBoost 3 · SHAP ≈ 14. Chương 3 has just two headings: *3.1 Thiết kế mô hình và thiết lập tham số* and *3.2 Kết quả thực nghiệm*.
+
+**The notebook is far larger than Chương 3 can hold — deliberately, and that is fine.** The notebook is the workbench; the đề án is the report. The extra work bought *correct numbers* (the leakage gates, the CV protocol, the stratified split all fixed real errors) and answers for the defence. It must not all be written up.
+
+**What goes where:**
+
+| Priority | Content | Placement |
+|---|---|---|
+| Core | parameter table · six-model comparison · confusion matrix · ROC · SHAP bar / beeswarm / waterfall | Chương 3, 6–7 pages |
+| Supporting | CV ± std · threshold sweep · sensitivity | one paragraph or a small table inside 3.2 |
+| Worth its own heading | **external validation on Testkhoa** | 3.3, ≈ 2 pages — the advisor supplied that file, so it should appear |
+| Appendix / one sentence | split-variation · augmentation · leakage gate | Phụ lục, or mentioned and not shown |
+
 ## Status
 
-Chương 1, 2, 3 and Kết luận are **not yet written**. PHẦN MỞ ĐẦU exists in draft and needs real citations added to item 2 (Tổng quan tình hình nghiên cứu) — the templates cite ~8 specific studies with author, year and reported accuracy, and the current draft has none.
+**Notebook: done and verified.** Stop adding experiments to it.
+
+**Document: barely started.** Chương 1, 2, 3 and Kết luận are unwritten — and Chương 1 alone is 65% of the đề án. PHẦN MỞ ĐẦU exists in draft and needs real citations in item 2 (*Tổng quan tình hình nghiên cứu*); the templates cite ~8 studies with author, year and reported accuracy, and the current draft has none. Item 1 needs a sourced dropout statistic.
+
+The remaining bottleneck is **Chương 1**, not the experiments.

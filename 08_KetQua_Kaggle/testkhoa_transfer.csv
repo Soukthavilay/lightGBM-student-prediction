@@ -1,0 +1,3 @@
+Input,AUC,AP,Mean predicted risk,Actual dropout rate
+renamed only,0.9006,0.7896,49.5%,13.2%
+renamed + rescaled,0.9426,0.8312,54.5%,13.2%
